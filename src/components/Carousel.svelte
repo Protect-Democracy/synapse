@@ -39,7 +39,7 @@
 			mounted = true;
 
 			// Start auto spin
-			//continuousSpin();
+			continuousSpin();
 		}, 100);
 	});
 	onDestroy(() => {
@@ -72,6 +72,9 @@
 </div>
 
 <style>
+	/* Known clipping issue in Safari where you can see the background items
+	 as the wheel is spinning. */
+
 	.carousel {
 		position: relative;
 		height: 100%;

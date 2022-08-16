@@ -2,8 +2,16 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<title>1-on-1's | Protect Democracy</title>
 		<meta name="viewport" content="width=device-width" />
+
+		<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/favicons/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicons/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="%sveltekit.assets%/favicons/favicon-16x16.png">
+		<link rel="manifest" href="%sveltekit.assets%/favicons/site.webmanifest">
+		<link rel="mask-icon" href="%sveltekit.assets%/favicons/safari-pinned-tab.svg" color="#0099a9">
+		<meta name="msapplication-TileColor" content="#ffffff">
+		<meta name="theme-color" content="#ffffff">
 
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Aboreto|Josefin+Sans">
 
@@ -23,6 +31,11 @@
 				background-color: var(--background-color);
 				color: var(--text-color);
 				line-height: var(--line-height);
+			}
+
+			body {
+				margin: 0;
+				padding: 0;
 			}
 
 			button {
@@ -72,6 +85,15 @@
 				text-decoration: none;
 			}
 
+			a {
+				color: var(--text-color);
+				text-decoration: underline;
+			}
+
+			a:hover {
+				text-decoration: none;
+			}
+
 			.error-message {
 				color: var(--error-color);
 				font-size: 0.85em;
@@ -81,6 +103,10 @@
 			.help {
 				font-size: 0.85em;
 				margin-bottom: 0.5rem;
+			}
+
+			.spacer {
+				color: var(--highlight-color);
 			}
 		</style>
 

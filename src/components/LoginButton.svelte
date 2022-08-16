@@ -17,21 +17,14 @@
 			loggingAction = false;
 		} catch (e) {
 			console.error(e);
-			errorMessage = e.toString();
-			loggingAction = false;
-		}
-	}
 
-	// Logout
-	async function logout() {
-		loggingAction = true;
+			// Closed popup
+			if (e && e.code === 'auth/popup-closed-by-user') {
+				loggingAction = false;
+				return;
+			}
 
-		try {
-			await signOut(auth);
-			loggingAction = false;
-		} catch (e) {
-			console.error(e);
-			logoutError = e.toString();
+			loginError = e.toString();
 			loggingAction = false;
 		}
 	}
@@ -39,7 +32,7 @@
 
 <div class="authenticate">
 	{#if !$user.isLoggedIn}
-		<button on:click|preventDefault={login} disabled={loggingAction}>Sign up</button>
+		<button on:click|preventDefault={login} disabled={loggingAction}>Login</button>
 
 		{#if loginError}
 			<div class="error-message">{loginError}</div>
