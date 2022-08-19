@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "synapse"
+version = "0.0.1"
+description = "Scripts and command line utility to randomly pair people up for 1-on-1's."
+authors = ["voteshield"]
+
+[tool.poetry.scripts]
+synapse = "synapse.cli:main"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+colorama = "^0.4.4"
+black = "^22.3.0"
+gspread = "^5.4.0"
+python-dotenv = "^0.20.0"
+pytest = "^7.1.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
