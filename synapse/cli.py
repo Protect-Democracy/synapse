@@ -1,8 +1,12 @@
 # Dependencies
+import sys
+import json
+import re
 from os import getenv
 from random import shuffle
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from dotenv import load_dotenv
+import gspread
 
 # Load env variables from .env file
 load_dotenv()
@@ -11,6 +15,12 @@ load_dotenv()
 # History baseline for comparing pairs in number of days.  If a pair was
 # not paired before this time, then it is assumed to be new.
 HISTORY_BASELINE = 180
+VALID_EMAIL_REGEX = r"@(protectdemocracy\.org|voteshield\.us|example\.com)$"
+
+
+# Values to define as needed
+global_gpread_client = None
+global_google_auth_token = None
 
 
 def main():
@@ -50,7 +60,11 @@ def main():
     emails = collect_emails(args.spreadsheet, args.sheet)
 
     # Make pairs
-    pairs = pair_emails(emails)
+    score, pairs = pair_emails(emails)
+
+    eprint(
+        f"Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+    )
 
 
 def collect_emails(spreadsheet, sheet):
@@ -60,9 +74,26 @@ def collect_emails(spreadsheet, sheet):
     if not spreadsheet:
         spreadsheet = getenv("SYNAPSE_SPREADSHEET")
     if not sheet:
-        spreadsheet = getenv("SYNAPSE_SHEET", "0")
+        sheet = getenv("SYNAPSE_SHEET", "0")
 
-    return ["one@example.com", "two@example.com"]
+    # Check values
+    if not spreadsheet:
+        raise Exception(
+            "Spreadsheet not provided via CLI argument or SYNAPSE_SPREADSHEET environment variable."
+        )
+
+    # Connect to spreadsheet
+    gspread_client = get_gpread_client()
+    spreadsheet = gspread_client.open_by_key(spreadsheet)
+    sheet = spreadsheet.get_worksheet(int(sheet))
+
+    # Get all values from first column
+    column_values = sheet.col_values(1)
+
+    # Filter valid emails
+    emails = [v for v in column_values if re.search(VALID_EMAIL_REGEX, v)]
+
+    return emails
 
 
 def pair_emails(emails, history=None, sample_count=1000):
@@ -70,7 +101,7 @@ def pair_emails(emails, history=None, sample_count=1000):
 
     # Don't do anything if only one or less emails
     if len(emails) < 2:
-        return []
+        return (0, [])
 
     # Make samples of pairs to try to avoid matching people up with
     # the sample people recently
@@ -96,14 +127,12 @@ def pair_emails(emails, history=None, sample_count=1000):
 
         # Determine history score and add to sample
         history_score = calculate_history_score(pairs, history)
-
-        # Add to samples
         samples.append((history_score, pairs))
 
     # Find lowest score
     samples.sort(key=lambda x: x[0])
 
-    return samples[0][1]
+    return (samples[0][0], samples[0][1])
 
 
 def calculate_history_score(pairs, history):
@@ -136,6 +165,43 @@ def has_pair_in_pairs(pair, pairs):
             return True
 
     return False
+
+
+def get_gpread_client():
+    """Get Google Spreadsheet client."""
+    global global_gpread_client
+
+    if global_gpread_client is None:
+        google_auth_token = get_google_auth_token()
+        global_gpread_client = gspread.service_account_from_dict(google_auth_token)
+
+    return global_gpread_client
+
+
+def get_google_auth_token():
+    global global_google_auth_token
+
+    # Check Google credentials if spreadsheet option is provided
+    if global_google_auth_token is None:
+        json_token = getenv("SYNAPSE_GOOGLE_SERVICE_ACCOUNT", None)
+        if json_token is None:
+            raise Exception(
+                "Google Service Account not found. Please set SYNAPSE_GOOGLE_SERVICE_ACCOUNT environment variable."
+            )
+        else:
+            try:
+                global_google_auth_token = json.loads(json_token)
+            except json.decoder.JSONDecodeError:
+                raise Exception(
+                    "Google Service Account not parsable. Please set SYNAPSE_GOOGLE_SERVICE_ACCOUNT environment variable as escaped JSON."
+                )
+
+    return global_google_auth_token
+
+
+def eprint(*args, **kwargs):
+    """Print to stderr"""
+    print(*args, file=sys.stderr, **kwargs)
 
 
 # Run if script is executed directly

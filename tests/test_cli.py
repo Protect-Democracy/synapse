@@ -15,17 +15,18 @@ def test_pair_emails():
         "ex9@a.bc",
     ]
 
-    # # Test basic example
-    # test_pairs = pair_emails(test_emails)
-    # assert len(test_pairs) == 4
-    # assert len(test_pairs[0]) == 2
-    # assert len(test_pairs[1]) == 2
-    # assert len(test_pairs[2]) == 2
-    # assert len(test_pairs[3]) == 3
+    # Test basic example
+    test_score, test_pairs = pair_emails(test_emails)
+    assert test_score == 0
+    assert len(test_pairs) == 4
+    assert len(test_pairs[0]) == 2
+    assert len(test_pairs[1]) == 2
+    assert len(test_pairs[2]) == 2
+    assert len(test_pairs[3]) == 3
 
-    # # Test not enough
-    # assert pair_emails([]) == []
-    # assert pair_emails(["a@b.com"]) == []
+    # Test not enough
+    assert pair_emails([]) == (0, [])
+    assert pair_emails(["a@b.com"]) == (0, [])
 
     # Test with history
     test_history = [
@@ -37,7 +38,7 @@ def test_pair_emails():
             ],
         },
     ]
-    test_pairs_with_history = pair_emails(test_emails, history=test_history)
+    test_score, test_pairs_with_history = pair_emails(test_emails, history=test_history)
     assert len(test_pairs_with_history) == 4
 
 
