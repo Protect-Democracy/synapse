@@ -6,6 +6,7 @@ from os import getenv
 from random import shuffle
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from dotenv import load_dotenv
+from datetime import datetime
 import gspread
 
 # Load env variables from .env file
@@ -14,8 +15,9 @@ load_dotenv()
 
 # History baseline for comparing pairs in number of days.  If a pair was
 # not paired before this time, then it is assumed to be new.
-HISTORY_BASELINE = 180
+HISTORY_SCORE_MAXIMUM = 300
 VALID_EMAIL_REGEX = r"@(protectdemocracy\.org|voteshield\.us|example\.com)$"
+HISTORY_SHEET_NAME = "Sent history (DO NOT EDIT)"
 
 
 # Values to define as needed
@@ -57,14 +59,30 @@ def main():
     args = parser.parse_args()
 
     # Get list of emails from spreadsheet
+    eprint("Loading emails...")
     emails = collect_emails(args.spreadsheet, args.sheet)
 
-    # Make pairs
-    score, pairs = pair_emails(emails)
+    # Reading history from spreadsheet
+    history = read_history()
 
+    # Make pairs
+    score, pairs = pair_emails(emails, history=history)
+
+    # Prompt user for sending emails
     eprint(
         f"Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
     )
+    email_confirmation = input("Send emails? (y/n): ")
+    if re.match(r"(y|Y|yes|YES)", email_confirmation) is None:
+        eprint("Exiting.")
+        return
+
+    # Send emails
+    # TODO
+
+    # Save history
+    eprint("Saving history...")
+    save_history(pairs)
 
 
 def collect_emails(spreadsheet, sheet):
@@ -90,8 +108,17 @@ def collect_emails(spreadsheet, sheet):
     # Get all values from first column
     column_values = sheet.col_values(1)
 
-    # Filter valid emails
-    emails = [v for v in column_values if re.search(VALID_EMAIL_REGEX, v)]
+    return filter_emails(column_values)
+
+
+def filter_emails(emails):
+    """Filter emails to remove invalid emails and duplicates."""
+
+    # Valid emails
+    emails = [v for v in emails if re.search(VALID_EMAIL_REGEX, v)]
+
+    # Remove any duplicates
+    emails = list(set(emails))
 
     return emails
 
@@ -133,6 +160,89 @@ def pair_emails(emails, history=None, sample_count=1000):
     samples.sort(key=lambda x: x[0])
 
     return (samples[0][0], samples[0][1])
+
+
+def read_history():
+    """Read history from spreadsheet"""
+
+    # Get history spreadsheet
+    gspread_client = get_gpread_client()
+    history_spreadsheet = gspread_client.open_by_key(getenv("SYNAPSE_SPREADSHEET"))
+
+    # Get history if sheet exists
+    history_sheet = None
+    try:
+        history_sheet = history_spreadsheet.worksheet(HISTORY_SHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        return None
+
+    # Get all values
+    values = history_sheet.get_all_records()
+
+    # Transform
+    transformed = []
+    for v in values:
+        try:
+            transformed.append(
+                {
+                    "score": convert_date_to_score(v["Date"]),
+                    "pairs": json.loads(v["Email pairs"]),
+                }
+            )
+        except json.decoder.JSONDecodeError:
+            pass
+
+    return transformed
+
+
+def convert_date_to_score(input):
+    """Convert iso string to score"""
+
+    # Convert to datetime
+    input_datetime = datetime.fromisoformat(input)
+
+    # Calculate score
+    score = (datetime.now() - input_datetime).days
+
+    # At some point, it's ok to pair up again
+    if score > HISTORY_SCORE_MAXIMUM:
+        score = 0
+
+    return score
+
+
+def save_history(pairs):
+    """Save pairing to history spreadsheet."""
+
+    # Get history spreadsheet
+    gspread_client = get_gpread_client()
+    history_spreadsheet = gspread_client.open_by_key(getenv("SYNAPSE_SPREADSHEET"))
+
+    # Get history sheet, make one if not found
+    try:
+        history_sheet = history_spreadsheet.worksheet(HISTORY_SHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        history_sheet = history_spreadsheet.add_worksheet(
+            title=HISTORY_SHEET_NAME,
+            rows=1000,
+            cols=3,
+        )
+
+        # Add headers
+        history_sheet.append_row(["Date", "Email pairs"])
+
+        # Some niceties: Format first row
+        history_sheet.format(
+            "A1:C1",
+            {
+                "backgroundColor": {"red": 50, "green": 50, "blue": 50},
+                "textFormat": {"bold": True},
+            },
+        )
+        history_sheet.freeze(rows=1)
+
+    # Add new history
+    history_sheet.append_row([datetime.now().isoformat(), json.dumps(pairs)])
 
 
 def calculate_history_score(pairs, history):

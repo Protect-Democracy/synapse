@@ -1,5 +1,10 @@
 # To test
-from synapse.cli import pair_emails, calculate_history_score, has_pair_in_pairs
+from synapse.cli import (
+    pair_emails,
+    calculate_history_score,
+    has_pair_in_pairs,
+    filter_emails,
+)
 
 
 def test_pair_emails():
@@ -124,3 +129,16 @@ def test_has_pair_in_pairs():
     assert has_pair_in_pairs(test_no_match_pair, test_pairs) == False
     assert has_pair_in_pairs(test_triple_pair, test_pairs) == True
     assert has_pair_in_pairs(test_pair_match_triple, test_pairs) == True
+
+
+def test_filter_emails():
+    test_emails = [
+        "not-email",
+        "",
+        "a@example.com",
+        "a@example.com",
+        "a+34@example.com",
+        "in@valid.net",
+    ]
+
+    assert filter_emails(test_emails) == ["a@example.com", "a+34@example.com"]

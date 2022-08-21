@@ -21,8 +21,8 @@ More examples:
 
 ### Options
 
-- `--no-send`:
-- `--send`:
+- `--no-send`: Do not actually send emails.
+- `--send`: Send emails without confirmation.
 - `--spreadsheet`: The Google Spreadsheet ID to save output to.
 - `--sheet`: The Google Spreadsheet Sheet ID to save output to. Utilizes relevant environment variable if not provided. Defaults to 0 if neither supplied.
 
