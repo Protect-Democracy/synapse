@@ -118,7 +118,7 @@ def filter_emails(emails):
     emails = [v for v in emails if re.search(VALID_EMAIL_REGEX, v)]
 
     # Remove any duplicates
-    emails = list(set(emails))
+    emails = unique(emails)
 
     return emails
 
@@ -202,11 +202,12 @@ def convert_date_to_score(input):
     input_datetime = datetime.fromisoformat(input)
 
     # Calculate score
-    score = (datetime.now() - input_datetime).days
+    score = HISTORY_SCORE_MAXIMUM - (datetime.now() - input_datetime).days
 
-    # At some point, it's ok to pair up again
-    if score > HISTORY_SCORE_MAXIMUM:
-        score = 0
+    # If after maximum, set to 1 to help push pairing with
+    # someone that is a 0, but ok to re-pair
+    if score < 0:
+        score = 1
 
     return score
 
@@ -307,6 +308,12 @@ def get_google_auth_token():
                 )
 
     return global_google_auth_token
+
+
+def unique(sequence):
+    """Unique list preserving order"""
+    seen = set()
+    return [x for x in sequence if not (x in seen or seen.add(x))]
 
 
 def eprint(*args, **kwargs):

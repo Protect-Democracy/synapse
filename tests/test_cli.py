@@ -1,9 +1,14 @@
-# To test
+# Deps for testing
+import pytest
+from freezegun import freeze_time
+
+# Deps to test
 from synapse.cli import (
     pair_emails,
     calculate_history_score,
     has_pair_in_pairs,
     filter_emails,
+    convert_date_to_score,
 )
 
 
@@ -142,3 +147,12 @@ def test_filter_emails():
     ]
 
     assert filter_emails(test_emails) == ["a@example.com", "a+34@example.com"]
+
+
+@freeze_time("2022-01-01T12:00:00")
+def test_convert_date_to_score():
+
+    # Basics
+    assert convert_date_to_score("2021-12-01T01:01:01") == 300 - 31
+    assert convert_date_to_score("2022-01-01T01:01:01") == 300 - 0
+    assert convert_date_to_score("2019-12-01T01:01:01") == 1
