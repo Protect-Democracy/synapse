@@ -2,12 +2,16 @@
 import sys
 import json
 import re
-from os import getenv
+from urllib.parse import urlencode
+from os import getenv, path
 from random import shuffle
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from dotenv import load_dotenv
 from datetime import datetime
 import gspread
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 # Load env variables from .env file
 load_dotenv()
@@ -16,7 +20,7 @@ load_dotenv()
 # History baseline for comparing pairs in number of days.  If a pair was
 # not paired before this time, then it is assumed to be new.
 HISTORY_SCORE_MAXIMUM = 300
-VALID_EMAIL_REGEX = r"@(protectdemocracy\.org|voteshield\.us|example\.com)$"
+VALID_EMAIL_REGEX = r"@(protectdemocracy\.org|voteshield\.us)$"
 HISTORY_SHEET_NAME = "Sent history (DO NOT EDIT)"
 
 
@@ -58,9 +62,13 @@ def main():
     # Parse arguments
     args = parser.parse_args()
 
+    # Use env variables if not provided
+    spreadsheet = args.spreadsheet or getenv("SYNAPSE_SPREADSHEET")
+    sheet = args.sheet or getenv("SYNAPSE_SHEET", "0")
+
     # Get list of emails from spreadsheet
     eprint("Loading emails...")
-    emails = collect_emails(args.spreadsheet, args.sheet)
+    emails = collect_emails(spreadsheet, sheet)
 
     # Reading history from spreadsheet
     history = read_history()
@@ -68,21 +76,129 @@ def main():
     # Make pairs
     score, pairs = pair_emails(emails, history=history)
 
-    # Prompt user for sending emails
-    eprint(
-        f"Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
-    )
-    email_confirmation = input("Send emails? (y/n): ")
-    if re.match(r"(y|Y|yes|YES)", email_confirmation) is None:
-        eprint("Exiting.")
+    # No send
+    if args.no_send:
+        eprint(
+            f"Not sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+        )
         return
 
+    # Prompt user for sending emails
+    if not args.send:
+        eprint(
+            f"Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+        )
+        email_confirmation = input("Send emails? (y/n): ")
+        if re.match(r"(y|Y|yes|YES)", email_confirmation) is None:
+            eprint("Exiting.")
+            return
+
     # Send emails
-    # TODO
+    send_emails(pairs, spreadsheet, sheet)
 
     # Save history
     eprint("Saving history...")
     save_history(pairs)
+
+
+def send_emails(pairs, spreadsheet, sheet):
+    """Send all emails"""
+
+    # Templates
+    dirname = path.dirname(__file__)
+    email_template_html_filename = path.join(
+        dirname, "templates", "email_template.html"
+    )
+    with open(email_template_html_filename, "r") as email_template_html:
+        email_template_txt_filename = path.join(
+            dirname, "templates", "email_template.txt"
+        )
+        with open(email_template_txt_filename, "r") as email_template_txt:
+
+            # Go through each pair and send emails
+            for pair in pairs:
+                emails = ",".join(pair)
+                names = [email.split(".")[0].capitalize() for email in pair]
+                html_names = [f"<strong>{name}</strong>" for name in names]
+                html_names_joined = (
+                    " and ".join(html_names)
+                    if len(html_names) == 2
+                    else ", ".join(html_names)
+                )
+
+                # Subject
+                # TODO: Use a random subject from a list
+                subject = "Paired up for a 1 on 1"
+
+                # Spreadsheet URL
+                spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet}/edit#gid={sheet}"
+
+                # Schedule URL
+                schedule_query = urlencode(
+                    {
+                        "action": "TEMPLATE",
+                        "text": f"1-on-1: {', '.join(names)}",
+                        "add": emails,
+                        "details": f"This 1-on-1 was randomly paired by an automated system.  If you don't want to receive these pairings anymore, manage your email at this spreadsheet: {spreadsheet_url}",
+                    }
+                )
+                schedule_url = (
+                    f"https://calendar.google.com/calendar/render?{schedule_query}"
+                )
+
+                # Text template
+                body_text = (
+                    email_template_txt.read()
+                    .replace("[[[NAMES]]]", ", ".join(names))
+                    .replace("[[[SCHEDULE_URL]]]", schedule_url)
+                    .replace("[[[SPREADSHEET_URL]]]", spreadsheet_url)
+                )
+
+                # Email template
+                body_html = (
+                    email_template_html.read()
+                    .replace("[[[NAMES]]]", html_names_joined)
+                    .replace("[[[SCHEDULE_URL]]]", schedule_url)
+                    .replace("[[[SPREADSHEET_URL]]]", spreadsheet_url)
+                )
+
+                send_email(emails, None, subject, body_html, body_text)
+
+
+def send_email(to, from_, subject, body_html, body_text):
+    """
+    Send a multipart email
+    Inspiration: https://stackoverflow.com/questions/882712/send-html-emails-with-python
+    """
+    from_ = from_ if from_ is not None else getenv("SYNAPSE_GMAIL_USERNAME")
+
+    # Create message container - the correct MIME type is multipart/alternative.
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = from_
+    msg["To"] = to
+
+    # Create the body of the message (a plain-text and an HTML version).
+    text = body_text
+    html = body_html
+
+    # Record the MIME types of both parts - text/plain and text/html.
+    part1 = MIMEText(text, "plain")
+    part2 = MIMEText(html, "html")
+
+    # Attach parts into message container.
+    # According to RFC 2046, the last part of a multipart message, in this case
+    # the HTML message, is best and preferred.
+    msg.attach(part1)
+    msg.attach(part2)
+
+    # Send the message via local SMTP server.
+    mail = smtplib.SMTP("smtp.gmail.com", 587)
+    mail.ehlo()
+    mail.starttls()
+    mail.login(getenv("SYNAPSE_GMAIL_USERNAME"), getenv("SYNAPSE_GMAIL_APP_PASSWORD"))
+    mail.sendmail(from_, to, msg.as_string())
+    mail.quit()
 
 
 def collect_emails(spreadsheet, sheet):

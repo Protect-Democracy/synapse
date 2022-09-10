@@ -45,6 +45,9 @@ More examples:
     ```
   - Make sure the email for the service account is shared with the document that is meant to be written to.
   - Helpful reference: [gspread auth](https://docs.gspread.org/en/latest/oauth2.html)
+- `SYNAPSE_GMAIL_USERNAME`: The Google Mail account to send emails from.
+  - TODO: Ideally sending emails would happen through a service account or developer app, but this is not straightforward and requires administrative priviledge.
+- `SYNAPSE_GMAIL_APP_PASSWORD`: The Google Mail account's password, specifically should use an [App Password](https://support.google.com/accounts/answer/185833?hl=en).
 
 ## Contributing
 

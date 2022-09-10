@@ -52,3 +52,7 @@ To run tests, you should do the following:
 ```bash
 poetry run pytest
 ```
+
+### Email template
+
+Email design on [stripo.email](https://my.stripo.email/cabinet/#/template-editor/?projectId=684149&templateId=1544434&type=MY_TEMPLATE&templateProjectId=470969).
