@@ -233,11 +233,13 @@ def collect_emails(spreadsheet, sheet):
     return filter_emails(column_values)
 
 
-def filter_emails(emails):
+def filter_emails(emails, filter_regex=None):
     """Filter emails to remove invalid emails and duplicates."""
 
     # Valid emails
-    valid_email_regex_string = getenv("SYNAPSE_VALID_EMAIL_REGEX")
+    valid_email_regex_string = (
+        filter_regex if filter_regex else getenv("SYNAPSE_VALID_EMAIL_REGEX")
+    )
     if not valid_email_regex_string:
         raise Exception(
             "Please provide a SYNAPSE_VALID_EMAIL_REGEX value such as '@example\.com$'"

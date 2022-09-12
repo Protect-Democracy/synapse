@@ -146,7 +146,10 @@ def test_filter_emails():
         "in@valid.net",
     ]
 
-    assert filter_emails(test_emails) == ["a@example.com", "a+34@example.com"]
+    assert filter_emails(test_emails, filter_regex="@example\.com$") == [
+        "a@example.com",
+        "a+34@example.com",
+    ]
 
 
 @freeze_time("2022-01-01T12:00:00")

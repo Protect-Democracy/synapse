@@ -28,9 +28,10 @@ More examples:
 
 ### Environment variables
 
-- `SYNAPSE_SPREADSHEET`
-- `SYNAPSE_SHEET`
-- `SYNAPSE_GOOGLE_SERVICE_ACCOUNT`: The JSON token for the Google service account that has access to the Google Drive and Google Sheets.
+- `SYNAPSE_VALID_EMAIL_REGEX`: (required) Regex to filter out emails that are valid for sending to. Example: `@example\.com$`
+- `SYNAPSE_SPREADSHEET`: (optional) The Google spreadsheet ID to pull emails from. Can be provided via CLI.
+- `SYNAPSE_SHEET`: (optional) The Google worksheet ID to pull emails from. Defaults to `0`; can be provided via CLI.
+- `SYNAPSE_GOOGLE_SERVICE_ACCOUNT`: (required) The JSON token for the Google service account that has access to the Google Drive and Google Sheets.
   - The format should be something like this; make sure to escape double quotes and new line characters (or remove): \
     ```bash
     GOOGLE_SERVICE_ACCOUNT="{
@@ -45,9 +46,9 @@ More examples:
     ```
   - Make sure the email for the service account is shared with the document that is meant to be written to.
   - Helpful reference: [gspread auth](https://docs.gspread.org/en/latest/oauth2.html)
-- `SYNAPSE_GMAIL_USERNAME`: The Google Mail account to send emails from.
+- `SYNAPSE_GMAIL_USERNAME`: (required) The Google Mail account to send emails from.
   - TODO: Ideally sending emails would happen through a service account or developer app, but this is not straightforward and requires administrative priviledge.
-- `SYNAPSE_GMAIL_APP_PASSWORD`: The Google Mail account's password, specifically should use an [App Password](https://support.google.com/accounts/answer/185833?hl=en).
+- `SYNAPSE_GMAIL_APP_PASSWORD`: (required) The Google Mail account's password, specifically should use an [App Password](https://support.google.com/accounts/answer/185833?hl=en).
 
 ## Contributing
 
