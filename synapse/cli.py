@@ -2,6 +2,7 @@
 import sys
 import json
 import re
+from time import sleep
 from urllib.parse import urlencode
 from os import getenv, path
 from random import shuffle
@@ -20,8 +21,8 @@ load_dotenv()
 # History baseline for comparing pairs in number of days.  If a pair was
 # not paired before this time, then it is assumed to be new.
 HISTORY_SCORE_MAXIMUM = 300
-VALID_EMAIL_REGEX = r"@(protectdemocracy\.org|voteshield\.us)$"
 HISTORY_SHEET_NAME = "Sent history (DO NOT EDIT)"
+TIME_TO_WAIT_BETWEEN_EMAILS = 15
 
 
 # Values to define as needed
@@ -67,7 +68,7 @@ def main():
     sheet = args.sheet or getenv("SYNAPSE_SHEET", "0")
 
     # Get list of emails from spreadsheet
-    eprint("Loading emails...")
+    eprint("  - Loading emails...")
     emails = collect_emails(spreadsheet, sheet)
 
     # Reading history from spreadsheet
@@ -79,25 +80,26 @@ def main():
     # No send
     if args.no_send:
         eprint(
-            f"Not sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+            f"\nNot sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
         )
         return
 
     # Prompt user for sending emails
     if not args.send:
         eprint(
-            f"Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+            f"  - Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
         )
-        email_confirmation = input("Send emails? (y/n): ")
+        email_confirmation = input("    Send emails? (y/n): ")
         if re.match(r"(y|Y|yes|YES)", email_confirmation) is None:
-            eprint("Exiting.")
+            eprint("\nExiting.")
             return
 
     # Send emails
+    eprint(f"  - Sending {len(pairs)} emails...")
     send_emails(pairs, spreadsheet, sheet)
 
     # Save history
-    eprint("Saving history...")
+    eprint("  - Saving history...")
     save_history(pairs)
 
 
@@ -162,6 +164,7 @@ def send_emails(pairs, spreadsheet, sheet):
                     .replace("[[[SPREADSHEET_URL]]]", spreadsheet_url)
                 )
 
+                # Send email
                 send_email(emails, None, subject, body_html, body_text)
 
 
@@ -200,6 +203,9 @@ def send_email(to, from_, subject, body_html, body_text):
     mail.sendmail(from_, to, msg.as_string())
     mail.quit()
 
+    # Make sure we don't do too many too quickly
+    sleep(TIME_TO_WAIT_BETWEEN_EMAILS)
+
 
 def collect_emails(spreadsheet, sheet):
     """Collect emails from spreadsheet."""
@@ -231,7 +237,13 @@ def filter_emails(emails):
     """Filter emails to remove invalid emails and duplicates."""
 
     # Valid emails
-    emails = [v for v in emails if re.search(VALID_EMAIL_REGEX, v)]
+    valid_email_regex_string = getenv("SYNAPSE_VALID_EMAIL_REGEX")
+    if not valid_email_regex_string:
+        raise Exception(
+            "Please provide a SYNAPSE_VALID_EMAIL_REGEX value such as '@example\.com$'"
+        )
+    valid_email_regex = re.compile(valid_email_regex_string, re.IGNORECASE)
+    emails = [v for v in emails if re.search(valid_email_regex, v)]
 
     # Remove any duplicates
     emails = unique(emails)
