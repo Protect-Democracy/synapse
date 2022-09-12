@@ -8,6 +8,12 @@ Synapse randomly pairs people in an organization for 1-on-1's on a regular sched
 - Install dependencies: `poetry install`
 - Use Poetry environment: `poetry shell`
 
+### Google spreadsheet
+
+Create a Google Spreadsheet that has the first column with emails address. Make sure to share it with the relevant service account (see Environment Variables). Example:
+
+![Screenshot example](docs/images/spreadsheet-example.png)
+
 ## Usage
 
 ```bash
