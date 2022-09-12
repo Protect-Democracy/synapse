@@ -177,9 +177,11 @@ def send_email(to, from_, subject, body_html, body_text):
 
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart("alternative")
+    msg.set_charset("UTF-8")
     msg["Subject"] = subject
     msg["From"] = from_
     msg["To"] = to
+    msg["reply-to"] = to
 
     # Create the body of the message (a plain-text and an HTML version).
     text = body_text
