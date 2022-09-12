@@ -14,24 +14,6 @@ Create a Google Spreadsheet that has the first column with emails address. Make 
 
 ![Screenshot example](docs/images/spreadsheet-example.png)
 
-## Usage
-
-```bash
-poetry run synapse
-```
-
-More examples:
-
-- Help `poetry run synapse --help`
-- Don't send emails: `poetry run synapse --no-send`
-
-### Options
-
-- `--no-send`: Do not actually send emails.
-- `--send`: Send emails without confirmation.
-- `--spreadsheet`: The Google Spreadsheet ID to save output to.
-- `--sheet`: The Google Spreadsheet Sheet ID to save output to. Utilizes relevant environment variable if not provided. Defaults to 0 if neither supplied.
-
 ### Environment variables
 
 - `SYNAPSE_VALID_EMAIL_REGEX`: (required) Regex to filter out emails that are valid for sending to. Example: `@example\.com$`
@@ -55,6 +37,24 @@ More examples:
 - `SYNAPSE_GMAIL_USERNAME`: (required) The Google Mail account to send emails from.
   - TODO: Ideally sending emails would happen through a service account or developer app, but this is not straightforward and requires administrative priviledge.
 - `SYNAPSE_GMAIL_APP_PASSWORD`: (required) The Google Mail account's password, specifically should use an [App Password](https://support.google.com/accounts/answer/185833?hl=en).
+
+## Usage
+
+```bash
+poetry run synapse
+```
+
+More examples:
+
+- Help `poetry run synapse --help`
+- Don't send emails: `poetry run synapse --no-send`
+
+### Options
+
+- `--no-send`: Do not actually send emails.
+- `--send`: Send emails without confirmation.
+- `--spreadsheet`: The Google Spreadsheet ID to save output to.
+- `--sheet`: The Google Spreadsheet Sheet ID to save output to. Utilizes relevant environment variable if not provided. Defaults to 0 if neither supplied.
 
 ## Contributing
 
