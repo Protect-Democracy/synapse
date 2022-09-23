@@ -2,6 +2,7 @@
 import sys
 import json
 import re
+import random
 from time import sleep
 from urllib.parse import urlencode
 from os import getenv, path
@@ -25,9 +26,20 @@ HISTORY_SHEET_NAME = "Sent history (DO NOT EDIT)"
 TIME_TO_WAIT_BETWEEN_EMAILS = 15
 
 
+# Potential subjects to use
+POTENTIAL_SUBJECTS = [
+    "You've been paired for a 1:1! ☕️ Time to schedule. 📆",
+    "1:1 time for [[[NAMES]]]! ☕️",
+    "[[[NAMES]]] you've been selected to catch up! 🍩",
+    "Schedule your 1:1, [[[NAMES]]]! 📆",
+    "What luck! [[[NAMES]]] have been paired for a 1:1! 🧋",
+]
+
+
 # Values to define as needed
 global_gpread_client = None
 global_google_auth_token = None
+global_mail_handler = None
 
 
 def main():
@@ -98,6 +110,11 @@ def main():
     eprint(f"  - Sending {len(pairs)} emails...")
     send_emails(pairs, spreadsheet, sheet)
 
+    # Close mail handler
+    mail_handler = get_mail_handler()
+    if mail_handler is not None:
+        mail_handler.quit()
+
     # Save history
     eprint("  - Saving history...")
     save_history(pairs)
@@ -117,20 +134,22 @@ def send_emails(pairs, spreadsheet, sheet):
         )
         with open(email_template_txt_filename, "r") as email_template_txt:
 
+            # Read files
+            email_template_txt_contents = email_template_txt.read()
+            email_template_html_contents = email_template_html.read()
+
             # Go through each pair and send emails
             for pair in pairs:
                 emails = ",".join(pair)
                 names = [email.split(".")[0].capitalize() for email in pair]
                 html_names = [f"<strong>{name}</strong>" for name in names]
-                html_names_joined = (
-                    " and ".join(html_names)
-                    if len(html_names) == 2
-                    else ", ".join(html_names)
-                )
+                names_joined = join_names(names)
+                html_names_joined = join_names(html_names)
 
                 # Subject
-                # TODO: Use a random subject from a list
-                subject = "Paired up for a 1 on 1"
+                subject = random.choice(POTENTIAL_SUBJECTS).replace(
+                    "[[[NAMES]]]", names_joined
+                )
 
                 # Spreadsheet URL
                 spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet}/edit#gid={sheet}"
@@ -150,16 +169,16 @@ def send_emails(pairs, spreadsheet, sheet):
 
                 # Text template
                 body_text = (
-                    email_template_txt.read()
-                    .replace("[[[NAMES]]]", ", ".join(names))
+                    email_template_txt_contents.replace("[[[NAMES]]]", names_joined)
                     .replace("[[[SCHEDULE_URL]]]", schedule_url)
                     .replace("[[[SPREADSHEET_URL]]]", spreadsheet_url)
                 )
 
                 # Email template
                 body_html = (
-                    email_template_html.read()
-                    .replace("[[[NAMES]]]", html_names_joined)
+                    email_template_html_contents.replace(
+                        "[[[NAMES]]]", html_names_joined
+                    )
                     .replace("[[[SCHEDULE_URL]]]", schedule_url)
                     .replace("[[[SPREADSHEET_URL]]]", spreadsheet_url)
                 )
@@ -198,12 +217,8 @@ def send_email(to, from_, subject, body_html, body_text):
     msg.attach(part2)
 
     # Send the message via local SMTP server.
-    mail = smtplib.SMTP("smtp.gmail.com", 587)
-    mail.ehlo()
-    mail.starttls()
-    mail.login(getenv("SYNAPSE_GMAIL_USERNAME"), getenv("SYNAPSE_GMAIL_APP_PASSWORD"))
-    mail.sendmail(from_, to, msg.as_string())
-    mail.quit()
+    mail_handler = get_mail_handler()
+    mail_handler.sendmail(from_, to, msg.as_string())
 
     # Make sure we don't do too many too quickly
     sleep(TIME_TO_WAIT_BETWEEN_EMAILS)
@@ -440,6 +455,32 @@ def get_google_auth_token():
                 )
 
     return global_google_auth_token
+
+
+def get_mail_handler():
+    """Create mail handler if needed"""
+    global global_mail_handler
+
+    if global_mail_handler is None:
+        global_mail_handler = smtplib.SMTP("smtp.gmail.com", 587)
+        global_mail_handler.ehlo()
+        global_mail_handler.starttls()
+        global_mail_handler.login(
+            getenv("SYNAPSE_GMAIL_USERNAME"), getenv("SYNAPSE_GMAIL_APP_PASSWORD")
+        )
+
+    return global_mail_handler
+
+
+def join_names(names):
+    """Join names with commas and 'and'"""
+
+    if len(names) == 1:
+        return names[0]
+    elif len(names) == 2:
+        return f"{names[0]} and {names[1]}"
+    else:
+        return f"{', '.join(names[:-1])}, and {names[-1]}"
 
 
 def unique(sequence):

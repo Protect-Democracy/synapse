@@ -1,6 +1,6 @@
 Hi [[[NAMES]]],
 
-You've been randomly selected to have a 1-on-1! We've paired you up, but it's up to you to schedule.  Use this link to quickly schedule your 1-on-1:
+You've been randomly selected to have a 1:1! We've paired you up, but it's up to you to schedule.  Use this link to quickly schedule your 1:1
 
 [[[SCHEDULE_URL]]]
 
