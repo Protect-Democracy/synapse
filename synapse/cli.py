@@ -24,6 +24,7 @@ load_dotenv()
 HISTORY_SCORE_MAXIMUM = 300
 HISTORY_SHEET_NAME = "Sent history (DO NOT EDIT)"
 TIME_TO_WAIT_BETWEEN_EMAILS = 15
+EMAIL_MATCH_PERMUTATIONS = 2000
 
 
 # Potential subjects to use
@@ -121,7 +122,13 @@ def main():
 
 
 def send_emails(pairs, spreadsheet, sheet):
-    """Send all emails"""
+    """
+    Send all emails
+
+    :param pairs: List of pairs to send emails for.
+    :param spreadsheet: ID of the spreadsheet, defaults to env var SYNAPSE_SPREADSHEET.
+    :param sheet: ID of the sheet, defaults to env var SYNAPSE_SHEET and 0 if neither
+    """
 
     # Templates
     dirname = path.dirname(__file__)
@@ -158,9 +165,9 @@ def send_emails(pairs, spreadsheet, sheet):
                 schedule_query = urlencode(
                     {
                         "action": "TEMPLATE",
-                        "text": f"1-on-1: {', '.join(names)}",
+                        "text": f"1:1 - {', '.join(names)}",
                         "add": emails,
-                        "details": f"This 1-on-1 was randomly paired by an automated system.  If you don't want to receive these pairings anymore, manage your email at this spreadsheet: {spreadsheet_url}",
+                        "details": f"This 1:1 was randomly paired by an automated system.  If you don't want to receive these pairings anymore, manage your email at this spreadsheet: {spreadsheet_url}",
                     }
                 )
                 schedule_url = (
@@ -191,6 +198,14 @@ def send_email(to, from_, subject, body_html, body_text):
     """
     Send a multipart email
     Inspiration: https://stackoverflow.com/questions/882712/send-html-emails-with-python
+
+    :param to: Email address to send to in the form of a string of emails separated by
+        commas.  Ex: a@example.com, b@example.com
+    :param from_: Email address to send from.  If not provided, will use the default
+        email address that is sending the emails.
+    :param subject: Subject of the email.
+    :param body_html: HTML body of the email.
+    :param body_text: Text body of the email.
     """
     from_ = from_ if from_ is not None else getenv("SYNAPSE_GMAIL_USERNAME")
 
@@ -218,14 +233,20 @@ def send_email(to, from_, subject, body_html, body_text):
 
     # Send the message via local SMTP server.
     mail_handler = get_mail_handler()
-    mail_handler.sendmail(from_, to, msg.as_string())
+    mail_handler.sendmail(from_, msg["To"].split(","), msg.as_string())
 
     # Make sure we don't do too many too quickly
     sleep(TIME_TO_WAIT_BETWEEN_EMAILS)
 
 
 def collect_emails(spreadsheet, sheet):
-    """Collect emails from spreadsheet."""
+    """
+    Collect emails from spreadsheet.
+
+    :param spreadsheet: ID of the spreadsheet, defaults to env var SYNAPSE_SPREADSHEET.
+    :param sheet: ID of the sheet, defaults to env var SYNAPSE_SHEET and 0 if neither
+        is provided.
+    """
 
     # Use environment variable if not provided
     if not spreadsheet:
@@ -251,7 +272,13 @@ def collect_emails(spreadsheet, sheet):
 
 
 def filter_emails(emails, filter_regex=None):
-    """Filter emails to remove invalid emails and duplicates."""
+    """
+    Filter emails to remove invalid emails and duplicates.
+
+    :param emails: List of emails to filter.
+    :param filter_regex: Regex to filter emails by.  Defaults to env
+        var SYNAPSE_VALID_EMAIL_REGEX.
+    """
 
     # Valid emails
     valid_email_regex_string = (
@@ -259,7 +286,7 @@ def filter_emails(emails, filter_regex=None):
     )
     if not valid_email_regex_string:
         raise Exception(
-            "Please provide a SYNAPSE_VALID_EMAIL_REGEX value such as '@example\.com$'"
+            "Please provide a SYNAPSE_VALID_EMAIL_REGEX value such as '@example\\.com$'"
         )
     valid_email_regex = re.compile(valid_email_regex_string, re.IGNORECASE)
     emails = [v for v in emails if re.search(valid_email_regex, v)]
@@ -270,12 +297,25 @@ def filter_emails(emails, filter_regex=None):
     return emails
 
 
-def pair_emails(emails, history=None, sample_count=1000):
-    """Randomly pair emails together"""
+def pair_emails(emails, history=None, sample_count=None):
+    """
+    Randomly pair emails together
+
+    :param emails: List of emails to pair.
+    :param history: List of previous pairings to avoid.
+    :param sample_count: Number of pair permutations to make to try to
+        find the most optimal; if not provided uses EMAIL_MATCH_PERMUTATIONS
+        constant.
+    """
 
     # Don't do anything if only one or less emails
     if len(emails) < 2:
         return (0, [])
+
+    # Sample count
+    sample_count = (
+        sample_count if sample_count is not None else EMAIL_MATCH_PERMUTATIONS
+    )
 
     # Make samples of pairs to try to avoid matching people up with
     # the sample people recently
