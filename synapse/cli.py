@@ -24,7 +24,7 @@ load_dotenv()
 HISTORY_SCORE_MAXIMUM = 300
 HISTORY_SHEET_NAME = "Sent history (DO NOT EDIT)"
 TIME_TO_WAIT_BETWEEN_EMAILS = 15
-EMAIL_MATCH_PERMUTATIONS = 2000
+EMAIL_MATCH_PERMUTATIONS = 10000
 
 
 # Potential subjects to use
@@ -103,14 +103,14 @@ def main():
     # No send
     if args.no_send:
         eprint(
-            f"\n⛔️ Not sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+            f"\n⛔️ Not sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better, 0 is not repetition)."
         )
         return
 
     # Prompt user for sending emails
     if not args.send:
         eprint(
-            f"  📧 Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+            f"  📧 Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better, 0 is not repetition)."
         )
         for pair in pairs:
             eprint(f"     - {', '.join(pair)}")
