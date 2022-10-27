@@ -41,6 +41,7 @@ POTENTIAL_SUBJECTS = [
 global_gpread_client = None
 global_google_auth_token = None
 global_mail_handler = None
+global_quiet_output = False
 
 
 def main():
@@ -72,16 +73,25 @@ def main():
         type=str,
         help="Google Spreadsheet Sheet ID; will also use SYNAPSE_SHEET if not provided.  Will use 0 if not provided in either place.",
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Minimize output.",
+    )
 
     # Parse arguments
     args = parser.parse_args()
+
+    # Define output
+    global global_quiet_output
+    global_quiet_output = args.quiet
 
     # Use env variables if not provided
     spreadsheet = args.spreadsheet or getenv("SYNAPSE_SPREADSHEET")
     sheet = args.sheet or getenv("SYNAPSE_SHEET", "0")
 
     # Get list of emails from spreadsheet
-    eprint("  - Loading emails...")
+    eprint("  💾 Loading emails...")
     emails = collect_emails(spreadsheet, sheet)
 
     # Reading history from spreadsheet
@@ -93,22 +103,25 @@ def main():
     # No send
     if args.no_send:
         eprint(
-            f"\nNot sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+            f"\n⛔️ Not sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
         )
         return
 
     # Prompt user for sending emails
     if not args.send:
         eprint(
-            f"  - Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
+            f"  📧 Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better)."
         )
-        email_confirmation = input("    Send emails? (y/n): ")
+        for pair in pairs:
+            eprint(f"     - {', '.join(pair)}")
+
+        email_confirmation = input("     Send emails? (y/n): ")
         if re.match(r"(y|Y|yes|YES)", email_confirmation) is None:
             eprint("\nExiting.")
             return
 
     # Send emails
-    eprint(f"  - Sending {len(pairs)} emails...")
+    eprint(f"  📧 Sending {len(pairs)} emails...")
     send_emails(pairs, spreadsheet, sheet)
 
     # Close mail handler
@@ -117,7 +130,7 @@ def main():
         mail_handler.quit()
 
     # Save history
-    eprint("  - Saving history...")
+    eprint("  💾 Saving history...")
     save_history(pairs)
 
 
@@ -531,7 +544,10 @@ def unique(sequence):
 
 def eprint(*args, **kwargs):
     """Print to stderr"""
-    print(*args, file=sys.stderr, **kwargs)
+    global global_quiet_output
+
+    if not global_quiet_output:
+        print(*args, file=sys.stderr, **kwargs)
 
 
 # Run if script is executed directly
