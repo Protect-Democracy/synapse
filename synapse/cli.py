@@ -304,6 +304,9 @@ def filter_emails(emails, filter_regex=None):
     valid_email_regex = re.compile(valid_email_regex_string, re.IGNORECASE)
     emails = [v for v in emails if re.search(valid_email_regex, v)]
 
+    # Lowercase emails
+    emails = [v.lower() for v in emails]
+
     # Remove any duplicates
     emails = unique(emails)
 
