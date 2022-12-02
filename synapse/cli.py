@@ -78,6 +78,11 @@ def main():
         action="store_true",
         help="Minimize output.",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="More output, specifically show individual email pairings.",
+    )
 
     # Parse arguments
     args = parser.parse_args()
@@ -103,17 +108,21 @@ def main():
     # No send
     if args.no_send:
         eprint(
-            f"\n⛔️ Not sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better, 0 is not repetition)."
+            f"\n  ⛔️ Not sending {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better, 0 is no repetition)."
         )
+        eprint("    Make sure to remove the --no-send flag to actually send emails.")
         return
 
     # Prompt user for sending emails
     if not args.send:
         eprint(
-            f"  📧 Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better, 0 is not repetition)."
+            f"  📧 Will send {len(emails)} emails in {len(pairs)} pairs with a repetition score of {score} (lower is better, 0 is no repetition)."
         )
-        for pair in pairs:
-            eprint(f"     - {', '.join(pair)}")
+
+        # Only show emails if verbose
+        if args.verbose:
+            for pair in pairs:
+                eprint(f"     - {', '.join(pair)}")
 
         email_confirmation = input("     Send emails? (y/n): ")
         if re.match(r"(y|Y|yes|YES)", email_confirmation) is None:
