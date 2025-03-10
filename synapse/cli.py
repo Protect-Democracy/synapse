@@ -1,19 +1,20 @@
 # Dependencies
-import sys
 import json
-import re
 import random
-from time import sleep
-from urllib.parse import urlencode
-from os import getenv, path
-from random import shuffle
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-from dotenv import load_dotenv
-from datetime import datetime
-import gspread
+import re
 import smtplib
+import sys
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from os import getenv, path
+from random import shuffle
+from time import sleep
+from urllib.parse import urlencode
+
+import gspread
+from dotenv import load_dotenv
 
 # Load env variables from .env file
 load_dotenv()
@@ -24,7 +25,7 @@ load_dotenv()
 HISTORY_SCORE_MAXIMUM = 300
 HISTORY_SHEET_NAME = "Sent history (DO NOT EDIT)"
 TIME_TO_WAIT_BETWEEN_EMAILS = 15
-EMAIL_MATCH_PERMUTATIONS = 10000
+EMAIL_MATCH_PERMUTATIONS = 20000
 
 
 # Potential subjects to use
@@ -103,6 +104,7 @@ def main():
     history = read_history()
 
     # Make pairs
+    eprint("  💾 Pairing emails...")
     score, pairs = pair_emails(emails, history=history)
 
     # No send
@@ -162,7 +164,6 @@ def send_emails(pairs, spreadsheet, sheet):
             dirname, "templates", "email_template.txt"
         )
         with open(email_template_txt_filename, "r") as email_template_txt:
-
             # Read files
             email_template_txt_contents = email_template_txt.read()
             email_template_html_contents = email_template_html.read()
